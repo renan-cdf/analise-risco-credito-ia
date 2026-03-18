@@ -6,7 +6,8 @@ seaborn
 scikit-learn
 xgboost
 plotly
-streamlit
+streamlit==1.35.0
+altair==4.2.2
 groq
 python-dotenv
 joblib
