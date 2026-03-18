@@ -12,15 +12,93 @@
 
 import os
 import joblib
+import warnings
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 import streamlit as st
 from groq import Groq
 from dotenv import load_dotenv
+warnings.filterwarnings("ignore")
 
 load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# -----------------------------------------------------------------------------
+# SETUP AUTOMÁTICO — gera dados e modelo se não existirem
+# -----------------------------------------------------------------------------
+def setup_automatico():
+    """Coleta dados do BACEN e treina o modelo se os arquivos não existirem."""
+    from bcb import sgs
+    from datetime import datetime
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.ensemble import RandomForestRegressor
+
+    arquivos = ["indicadores_bacen_bruto.csv", "features_bacen.csv",
+                "modelo_inadimplencia.pkl", "scaler.pkl", "features.pkl"]
+    caminhos = [os.path.join(BASE_DIR, f) for f in arquivos]
+
+    if all(os.path.exists(c) for c in caminhos):
+        return  # Tudo já existe, nada a fazer
+
+    st.info("⚙️ Primeira execução — coletando dados do BACEN e treinando modelo...")
+    progress = st.progress(0, text="Conectando ao BACEN...")
+
+    # 1. Coleta de dados
+    DATA_INICIO = "2015-03-18"
+    DATA_FIM    = datetime.today().strftime("%Y-%m-%d")
+
+    indicadores = sgs.get(
+        {
+            "IPCA (%)":            433,
+            "Inadimplência (%)":   21082,
+            "Juros PF (% a.a.)":   20714,
+            "Selic Meta (% a.a.)": 4189,
+        },
+        start=DATA_INICIO, end=DATA_FIM,
+    )
+    indicadores_clean = indicadores.ffill().bfill()
+    indicadores_clean.to_csv(os.path.join(BASE_DIR, "indicadores_bacen_bruto.csv"))
+    progress.progress(30, text="Dados coletados! Criando features...")
+
+    # 2. Feature engineering
+    df = indicadores_clean.copy()
+    for col in indicadores_clean.columns:
+        df[f'{col}_var_1m'] = df[col].pct_change(1) * 100
+        df[f'{col}_var_3m'] = df[col].pct_change(3) * 100
+        df[f'{col}_mm3']    = df[col].rolling(3).mean()
+        df[f'{col}_mm6']    = df[col].rolling(6).mean()
+        df[f'{col}_mm12']   = df[col].rolling(12).mean()
+        df[f'{col}_lag1']   = df[col].shift(1)
+        df[f'{col}_lag3']   = df[col].shift(3)
+    df = df.dropna()
+    df.to_csv(os.path.join(BASE_DIR, "features_bacen.csv"))
+    progress.progress(60, text="Features criadas! Treinando modelo...")
+
+    # 3. Treinamento
+    TARGET   = "Inadimplência (%)"
+    cols_drop = [c for c in df.columns if "Inadimplência" in c and c != TARGET]
+    df_model  = df.drop(columns=cols_drop)
+    FEATURES  = [c for c in df_model.columns if c != TARGET]
+    X = df_model[FEATURES]
+    y = df_model[TARGET]
+
+    split = int(len(df_model) * 0.8)
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train         = y.iloc[:split]
+
+    scaler = StandardScaler()
+    X_train_sc = scaler.fit_transform(X_train)
+
+    modelo = RandomForestRegressor(n_estimators=200, random_state=42)
+    modelo.fit(X_train_sc, y_train)
+
+    joblib.dump(modelo,   os.path.join(BASE_DIR, "modelo_inadimplencia.pkl"))
+    joblib.dump(scaler,   os.path.join(BASE_DIR, "scaler.pkl"))
+    joblib.dump(FEATURES, os.path.join(BASE_DIR, "features.pkl"))
+    progress.progress(100, text="✅ Pronto!")
+    st.success("Dados e modelo carregados com sucesso!")
+    st.rerun()
 
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -184,6 +262,7 @@ def carregar_modelo():
     features = joblib.load(os.path.join(BASE_DIR, "features.pkl"))
     return modelo, scaler, features
 
+setup_automatico()
 df_bruto, df_features = carregar_dados()
 modelo, scaler, features = carregar_modelo()
 
