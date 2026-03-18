@@ -12,32 +12,17 @@ A inadimplência é um dos principais riscos para cooperativas de crédito. Ante
 
 ---
 
-## 🏗️ Arquitetura do Projeto
+## 🏗️ Estrutura do Projeto
 
 ```
-projeto-risco-credito/
+analise-risco-credito-ia/
 │
-├── 📁 data/
-│   └── indicadores_bacen.csv        # Dados coletados e limpos
-│
-├── 📁 models/
-│   ├── modelo_inadimplencia.pkl     # Modelo treinado
-│   ├── scaler.pkl                   # Scaler para normalização
-│   └── features.pkl                 # Lista de features
-│
-├── 📁 notebooks/
-│   ├── 01_coleta_bacen.ipynb        # Integração com API do BACEN
-│   ├── 02_analise_exploratoria.ipynb
-│   └── 03_modelagem.ipynb
-│
-├── 📁 src/
-│   ├── bacen_integracao.py          # Coleta e visualização de dados
-│   ├── modelo_inadimplencia.py      # Treinamento do modelo preditivo
-│   └── agente_ia.py                 # Agente com LLM (LangChain + OpenAI)
-│
-├── app.py                           # Dashboard Streamlit
-├── requirements.txt
-├── .env.example
+├── bacen.py              # Coleta e visualização de dados do BACEN
+├── modelo.py             # Treinamento e comparação de modelos preditivos
+├── agente.py             # Agente de IA via terminal (Groq + Llama 3)
+├── app.py                # Dashboard interativo (Streamlit)
+├── requirements.txt      # Dependências do projeto
+├── .env.example          # Modelo do arquivo de variáveis de ambiente
 └── README.md
 ```
 
@@ -46,83 +31,93 @@ projeto-risco-credito/
 ## 🔬 Metodologia
 
 ### 1. Coleta de Dados
-- **Fonte:** API pública do Banco Central (SGS — Sistema Gerenciador de Séries)
+- **Fonte:** API pública do Banco Central — SGS (Sistema Gerenciador de Séries)
 - **Biblioteca:** `python-bcb`
-- **Indicadores:** IPCA, Selic, juros do crédito, inadimplência, concessões de crédito, desemprego, PIB mensal, rendimento médio
+- **Indicadores:** IPCA, Selic Meta, Juros PF e Inadimplência total
+- **Período:** 2015 → hoje (atualizado automaticamente a cada execução)
 
 ### 2. Feature Engineering
-- Lags temporais (1, 3 e 6 meses) para capturar efeitos defasados
+- Lags temporais (1 e 3 meses) para capturar efeitos defasados
 - Médias móveis (3, 6 e 12 meses)
-- Variações percentuais e absolutas
-- Variáveis de sazonalidade (mês, trimestre)
+- Variações mensais e trimestrais (momentum)
 
 ### 3. Modelagem
 - Divisão **temporal** treino/teste (80/20) — sem vazamento de dados
 - Comparação de 5 algoritmos: Regressão Linear, Ridge, Random Forest, Gradient Boosting e XGBoost
-- Métrica principal: **R² e MAE**
+- Métricas: **R², MAE e RMSE**
 
-### 4. Explicabilidade
-- **SHAP values** para interpretação das features mais relevantes
-- Fundamental em crédito por exigências regulatórias (ex: LGPD, Resolução BCB nº 4.557)
-
-### 5. Agente Inteligente
-- LangChain + OpenAI GPT para responder perguntas sobre os dados em linguagem natural
-- Exemplos de perguntas: *"Qual foi o pico de inadimplência no Brasil?"*, *"Como a Selic influencia o crédito?"*
+### 4. Agente Inteligente
+- LLM Llama 3.3 70B via Groq para responder perguntas sobre os dados em linguagem natural
+- Integrado ao modelo preditivo para responder perguntas de previsão em tempo real
 
 ---
 
 ## 📈 Resultados
 
-| Modelo | MAE | R² |
-|---|---|---|
-| XGBoost | ~0.08 | ~0.95 |
-| Gradient Boosting | ~0.10 | ~0.93 |
-| Random Forest | ~0.12 | ~0.91 |
-| Ridge | ~0.18 | ~0.84 |
-| Regressão Linear | ~0.20 | ~0.81 |
+| Modelo | MAE | RMSE | R² |
+|---|---|---|---|
+| 🏆 Random Forest | 0.2187 | 0.2741 | 0.5557 |
+| XGBoost | 0.2190 | 0.2742 | 0.5555 |
+| Gradient Boosting | 0.2210 | 0.2750 | 0.5520 |
+| Ridge | 0.2530 | 0.3470 | 0.2860 |
+| Regressão Linear | 0.2630 | 0.3530 | 0.2640 |
 
-> *Valores aproximados — execute o modelo para resultados exatos com os dados mais recentes.*
+> O modelo explica **55,6% da variação da inadimplência** usando apenas indicadores públicos do BACEN.
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Como Usar
 
 ### Pré-requisitos
 - Python 3.10+
-- Conta na OpenAI (para o agente de IA) — opcional
+- Chave gratuita do Groq: [console.groq.com](https://console.groq.com)
 
-### Instalação
-
+### 1. Clone o repositório
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/projeto-risco-credito.git
-cd projeto-risco-credito
-
-# Crie um ambiente virtual
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-
-# Instale as dependências
-pip install -r requirements.txt
-
-# Configure as variáveis de ambiente
-cp .env.example .env
-# Edite o .env com sua chave OpenAI (opcional)
+git clone https://github.com/renan-cdf/analise-risco-credito-ia.git
+cd analise-risco-credito-ia
 ```
 
-### Executar scripts
-
+### 2. Instale as dependências
 ```bash
-# 1. Coletar e visualizar dados do BACEN
-python src/bacen_integracao.py
+pip install -r requirements.txt
+```
 
-# 2. Treinar o modelo preditivo
-python src/modelo_inadimplencia.py
+### 3. Configure a chave do Groq
+Crie um arquivo `.env` na pasta do projeto com o conteúdo:
+```
+GROQ_API_KEY=sua-chave-aqui
+```
 
-# 3. Iniciar o dashboard
+### 4. Gere os dados e treine o modelo
+```bash
+# Coleta dados do BACEN e gera os CSVs
+python bacen.py
+
+# Treina o modelo preditivo e salva os .pkl
+python modelo.py
+```
+
+### 5. Rode o dashboard
+```bash
 streamlit run app.py
 ```
+O navegador abrirá automaticamente em `http://localhost:8501`
+
+### (Opcional) Rode o agente no terminal
+```bash
+python agente.py
+```
+
+---
+
+## 🖥️ Dashboard
+
+O dashboard possui 3 telas:
+
+- **📊 Dashboard** — gráficos interativos dos indicadores do BACEN com correlações
+- **🤖 Agente IA** — chat em linguagem natural sobre os dados, powered by Groq + Llama 3
+- **🔮 Previsão** — previsão de inadimplência para o próximo mês com o modelo treinado
 
 ---
 
@@ -134,9 +129,8 @@ streamlit run app.py
 | Dados BACEN | python-bcb |
 | Manipulação | Pandas, NumPy |
 | Modelagem | Scikit-learn, XGBoost |
-| Explicabilidade | SHAP |
-| Visualização | Matplotlib, Seaborn, Plotly |
-| Agente IA | LangChain, OpenAI GPT |
+| Visualização | Plotly |
+| Agente IA | Groq API + Llama 3.3 70B |
 | Dashboard | Streamlit |
 
 ---
@@ -153,8 +147,8 @@ streamlit run app.py
 
 ## 👤 Autor
 
-**Seu Nome**
-[LinkedIn](https://linkedin.com/in/seu-perfil) • [GitHub](https://github.com/seu-usuario)
+**Renan Fonseca**  
+[LinkedIn](https://linkedin.com/in/seu-perfil) • [GitHub](https://github.com/renan-cdf)
 
 ---
 
