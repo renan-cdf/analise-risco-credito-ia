@@ -1,13 +1,10 @@
 python-bcb
 pandas
 numpy
-matplotlib
-seaborn
 scikit-learn
 xgboost
 plotly
-streamlit==1.41.0
-pillow==11.1.0
+streamlit
 groq
 python-dotenv
 joblib
