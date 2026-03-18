@@ -1,12 +1,14 @@
 # 📊 Análise de Risco de Crédito com IA + Dados do BACEN
 
-> Projeto de portfólio demonstrando integração com API do Banco Central, modelagem preditiva de inadimplência e agente inteligente com LLM para o setor financeiro cooperativista.
+> Projeto de portfólio demonstrando integração com API do Banco Central, modelagem preditiva de inadimplência e agente inteligente com LLM para o setor financeiro.
+
+🌐 **[Acesse o dashboard online](https://iariscocredito.streamlit.app)**
 
 ---
 
 ## 🎯 Problema de Negócio
 
-A inadimplência é um dos principais riscos para cooperativas de crédito. Antecipar movimentos de inadimplência com base em indicadores macroeconômicos permite que gestores tomem decisões preventivas — ajustando concessões de crédito, taxas e políticas de cobrança antes que o problema se agrave.
+A inadimplência é um dos principais riscos para instituições financeiras. Antecipar movimentos de inadimplência com base em indicadores macroeconômicos permite que gestores tomem decisões preventivas — ajustando concessões de crédito, taxas e políticas de cobrança antes que o problema se agrave.
 
 **Pergunta central:** *É possível prever a inadimplência futura usando indicadores públicos do Banco Central?*
 
@@ -22,7 +24,6 @@ analise-risco-credito-ia/
 ├── agente.py             # Agente de IA via terminal (Groq + Llama 3)
 ├── app.py                # Dashboard interativo (Streamlit)
 ├── requirements.txt      # Dependências do projeto
-├── .env.example          # Modelo do arquivo de variáveis de ambiente
 └── README.md
 ```
 
@@ -84,17 +85,14 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure a chave do Groq
-Crie um arquivo `.env` na pasta do projeto com o conteúdo:
+Crie um arquivo `.env` na pasta do projeto:
 ```
 GROQ_API_KEY=sua-chave-aqui
 ```
 
 ### 4. Gere os dados e treine o modelo
 ```bash
-# Coleta dados do BACEN e gera os CSVs
 python bacen.py
-
-# Treina o modelo preditivo e salva os .pkl
 python modelo.py
 ```
 
@@ -137,7 +135,7 @@ O dashboard possui 3 telas:
 
 ## 📌 Próximos Passos
 
-- [ ] Deploy na Azure (alinhado com stack do Sicoob)
+- [ ] Deploy na Azure
 - [ ] Integração com banco de dados SQL Server
 - [ ] Pipeline automatizado com Apache Airflow
 - [ ] Testes unitários com pytest
